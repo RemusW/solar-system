@@ -37,7 +37,7 @@ export default class CBody {
                 function ( error ) {
                     console.log( 'An error happened' + error);
                 }
-                );
+            );
             console.log(this.mesh.position);
             return this.mesh;
         }
