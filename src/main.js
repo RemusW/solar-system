@@ -5,25 +5,26 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
 import CBody from './cbody';
 import * as dat from 'dat.gui';
+import Stats from 'three/examples/jsm/libs/stats.module'
 
 class Body {
 	mesh;
 	system;
 }
 
-
 const TIME_STEP = 1/60;
+const clock = new THREE.Clock();
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-const pointlight = new THREE.PointLight(0xffffff);
+const pointlight = new THREE.PointLight(0xffffff, 2);
+pointlight.scale.set(20,20,20);
 scene.add(pointlight);
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 camera.position.z = 200;
-camera.position.x = 200;
 
 const controls = new OrbitControls( camera, renderer.domElement );
 
@@ -53,6 +54,7 @@ loader.load(
 		sun.mesh = new THREE.Mesh( geometry, material );
 		sun.mesh.scale.set(.1, .1, .1);
 		sun.system.add(sun.mesh);
+		sun.mesh.add(new THREE.AxesHelper(1000));
 	},
 );
 
@@ -64,7 +66,8 @@ loader.load(
 	// called when the resource is loaded
 	function ( geometry ) {
 		const texture = new THREE.TextureLoader().load('Earth Diffuse.png');
-		const material = new THREE.MeshBasicMaterial( { map: texture } );
+		const normalMap = new THREE.TextureLoader().load('Earth Normal.png');
+		const material = new THREE.MeshStandardMaterial( { map: texture, normalMap: normalMap } );
 		earth.mesh = new THREE.Mesh( geometry, material );
 		earth.mesh.scale.set(.03, .03, .03);
 		earth.system.add(earth.mesh);
@@ -85,25 +88,51 @@ loader.load(
 		moon.mesh.scale.set(.01, .01, .01);
 		moon.system.add(moon.mesh);
 		moon.system.position.x = 30;
-		moonMesh.add(new THREE.AxesHelper(1000));
+		console.log(moon.system.matrixWorld);
+		moon.mesh.add(new THREE.AxesHelper(1000));
 	},
 );
 sun.system.add(earth.system);
 earth.system.add(moon.system);
+scene.add(new THREE.AxesHelper(1000));
 scene.add(sun.system);
 
 const spaceTexture = new THREE.TextureLoader().load('Sun Diffuse.png');
 // scene.background = spaceTexture;
 
 const gui = new dat.GUI();
-var obj = { add:function(){ console.log("clicked") }};
+var obj = { 
+	LookAtSun: function() {
+		let target = new THREE.Vector3();
+		sun.system.getWorldPosition(target);
+		camera.lookAt(target);
+		controls.update();
+	},
+	LookAtEarth: function() {
+		let target = new THREE.Vector3();
+		earth.system.getWorldPosition(target);
+		camera.lookAt(target);
+		controls.update();
+	},
+	LookAtMoon: function() {
+		let target = new THREE.Vector3();
+		moon.system.getWorldPosition(target);
+		camera.lookAt(target);
+		controls.update();
+	}
+};
 
-gui.add(obj,'add');
+gui.add(obj,'LookAtSun');
+gui.add(obj,'LookAtEarth');
+gui.add(obj,'LookAtMoon');
 
+const stats = Stats()
+document.body.appendChild(stats.dom)
 
 function animate() {
 	requestAnimationFrame( animate );
 
+	let delta = clock.getDelta();
 	// sunMesh.rotation.y += 0.1 * 1/60;
 	// solarSystem.rotation.y += 0.01;
 	// earthSystem.rotation.y += 0.2 * 1/60;
@@ -111,18 +140,19 @@ function animate() {
 	// moonSystem.rotation.y += 0.2 * 1/60;
 	// moonSystem.rotateY(.002);
 	// let speed = (2 * Math.PI * 150) / ;
-	let sunRotationSpeed = 2 * Math.PI / 30 * TIME_STEP;
-	let earthRotationSpeed = 2 * Math.PI / 1 * TIME_STEP;
-	let earthRevolutionSpeed = 2;
-	let moonRotationSpeed = 2 * Math.PI / 27.0 * TIME_STEP;
+	let sunRotationSpeed = 2 * Math.PI * (1/30) * delta;
+	let earthRotationSpeed = 2 * Math.PI * delta;
+	let earthRevolutionSpeed = 2 * Math.PI * (1/365) * delta;
+	let moonRotationSpeed = 2 * Math.PI * (1/27) * delta;
+	let moonRevolutionSpeed = 2 * Math.PI * (1/27) * delta;
 
-	// console.log(moonRotationSpeed);
-	
 	sun.mesh.rotateY(sunRotationSpeed);
 	earth.mesh.rotateY(earthRotationSpeed);
+	earth.system.rotateY(earthRevolutionSpeed);
 	moon.mesh.rotateY(moonRotationSpeed);
-
-
+	moon.system.rotateY(moonRevolutionSpeed);
+	
+	stats.update()
 	renderer.render( scene, camera );
 };
 
