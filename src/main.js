@@ -35,7 +35,6 @@ const loader = new DRACOLoader();
 // Specify path to a folder containing WASM/JS decoding libraries.
 loader.setDecoderPath( 'https://www.gstatic.com/draco/v1/decoders/' );
 
-
 const sunRotationSpeed = 2 * Math.PI * (1/30);
 const earthRotationSpeed = 2 * Math.PI;
 const earthRevolutionSpeed = 2 * Math.PI * (1/365);
@@ -50,7 +49,6 @@ earth.system = new THREE.Group();
 moon.system = new THREE.Group();
 
 scene.add(sun.system);
-var objectAxes = {};
 
 // Load a Draco geometry
 loader.load(
@@ -63,10 +61,6 @@ loader.load(
 		sun.mesh = new THREE.Mesh( geometry, material );
 		sun.mesh.scale.set(.1, .1, .1);
 		sun.system.add(sun.mesh);
-		
-		let sunAxis = new THREE.AxesHelper(1000);
-		sun.mesh.add(sunAxis);
-		objectAxes.sun = sunAxis;
 	},
 );
 
@@ -86,10 +80,6 @@ loader.load(
 		earth.system.add(earth.mesh);
 		earth.system.position.x = 150;
 		sun.system.add(earth.orbitPivot);
-		
-		let earthAxis = new THREE.AxesHelper(700);
-		earth.mesh.add(earthAxis);
-		objectAxes.earth = earthAxis;
 	},
 );
 
@@ -109,17 +99,8 @@ loader.load(
 		moon.system.add(moon.mesh);
 		moon.system.position.x = 30;
 		earth.system.add(moon.orbitPivot);
-		
-		let moonAxis = new THREE.AxesHelper(700);
-		moon.mesh.add(moonAxis);
-		objectAxes.moon = moonAxis;
 	},
 );
-
-let sceneAxes = new THREE.AxesHelper(1000);
-scene.add(sceneAxes);
-objectAxes.scene = sceneAxes;
-
 
 // Dat.GUI interface for debugging
 const gui = new dat.GUI();
