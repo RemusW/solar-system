@@ -3,31 +3,32 @@ import '/style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
-import CBody from './cbody';
 import * as dat from 'dat.gui';
 import Stats from 'three/examples/jsm/libs/stats.module'
 
+// Main organizational body for Celestial Bodies. Bodies revolve around a orbitPoint.
+// System is a group that contains all Bodies that would orbit around it
 class Body {
-	mesh;
-	system;
 	orbitPivot;
+	system;
+	mesh;
 }
 
-const TIME_STEP = 1/60;
 const clock = new THREE.Clock();
-
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-const pointlight = new THREE.PointLight(0xffffff, 2);
-pointlight.scale.set(20,20,20);
-scene.add(pointlight);
-
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.x = -200;
+camera.position.y = 200;
 camera.position.z = 200;
 
-const controls = new OrbitControls( camera, renderer.domElement );
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const pointlight = new THREE.PointLight(0xffffff, 2);
+scene.add(pointlight);
+
+const controls = new OrbitControls(camera, renderer.domElement);
 
 // Instantiate a loader
 const loader = new DRACOLoader();
@@ -35,12 +36,21 @@ const loader = new DRACOLoader();
 loader.setDecoderPath( 'https://www.gstatic.com/draco/v1/decoders/' );
 
 
+const sunRotationSpeed = 2 * Math.PI * (1/30);
+const earthRotationSpeed = 2 * Math.PI;
+const earthRevolutionSpeed = 2 * Math.PI * (1/365);
+const moonRotationSpeed = 2 * Math.PI * (1/27);
+const moonRevolutionSpeed = 2 * Math.PI  * (1/27);
+
 var sun = new Body();
-sun.system = new THREE.Group();
 var earth = new Body();
-earth.system = new THREE.Group();
 var moon = new Body();
+sun.system = new THREE.Group();
+earth.system = new THREE.Group();
 moon.system = new THREE.Group();
+
+scene.add(sun.system);
+var objectAxes = {};
 
 // Load a Draco geometry
 loader.load(
@@ -53,7 +63,10 @@ loader.load(
 		sun.mesh = new THREE.Mesh( geometry, material );
 		sun.mesh.scale.set(.1, .1, .1);
 		sun.system.add(sun.mesh);
-		sun.mesh.add(new THREE.AxesHelper(1000));
+		
+		let sunAxis = new THREE.AxesHelper(1000);
+		sun.mesh.add(sunAxis);
+		objectAxes.sun = sunAxis;
 	},
 );
 
@@ -70,10 +83,13 @@ loader.load(
 		earth.mesh.scale.set(.03, .03, .03);
 		earth.orbitPivot = new THREE.Object3D();
 		earth.orbitPivot.add(earth.system);
-		sun.system.add(earth.orbitPivot);
 		earth.system.add(earth.mesh);
 		earth.system.position.x = 150;
-		earth.mesh.add(new THREE.AxesHelper(700));
+		sun.system.add(earth.orbitPivot);
+		
+		let earthAxis = new THREE.AxesHelper(700);
+		earth.mesh.add(earthAxis);
+		objectAxes.earth = earthAxis;
 	},
 );
 
@@ -84,7 +100,7 @@ loader.load(
 	// called when the resource is loaded
 	function ( geometry ) {
 		const texture = new THREE.TextureLoader().load('Moon Diffuse.png');
-		const material = new THREE.MeshBasicMaterial( { map: texture } );
+		const material = new THREE.MeshStandardMaterial( { map: texture } );
 		moon.mesh = new THREE.Mesh( geometry, material );
 		moon.mesh.scale.set(.01, .01, .01);
 		moon.orbitPivot = new THREE.Object3D();
@@ -93,42 +109,27 @@ loader.load(
 		moon.system.add(moon.mesh);
 		moon.system.position.x = 30;
 		earth.system.add(moon.orbitPivot);
-		moon.mesh.add(new THREE.AxesHelper(1000));
+		
+		let moonAxis = new THREE.AxesHelper(700);
+		moon.mesh.add(moonAxis);
+		objectAxes.moon = moonAxis;
 	},
 );
-// scene.add(new THREE.AxesHelper(1000));
 
-scene.add(sun.system);
+let sceneAxes = new THREE.AxesHelper(1000);
+scene.add(sceneAxes);
+objectAxes.scene = sceneAxes;
 
-const spaceTexture = new THREE.TextureLoader().load('Galaxy Background.png');
-scene.environment = spaceTexture;
 
+// Dat.GUI interface for debugging
 const gui = new dat.GUI();
-var obj = { 
-	LookAtSun: function() {
-		let target = new THREE.Vector3();
-		sun.system.getWorldPosition(target);
-		camera.lookAt(target);
-		// controls.update();
-	},
-	LookAtEarth: function() {
-		let target = new THREE.Vector3();
-		earth.system.getWorldPosition(target);
-		camera.lookAt(target);
-		controls.update();
-	},
-	LookAtMoon: function() {
-		let target = new THREE.Vector3();
-		moon.system.getWorldPosition(target);
-		camera.lookAt(target);
-		// controls.update();
-	}
+var commands = { 
+	TimeScale: 1,
 };
+gui.add(commands,'TimeScale',0.1,10.0)
+	.name('scale time')
 
-gui.add(obj,'LookAtSun');
-gui.add(obj,'LookAtEarth');
-gui.add(obj,'LookAtMoon');
-
+// Display Performance Statistics
 const stats = Stats()
 document.body.appendChild(stats.dom)
 
@@ -136,20 +137,14 @@ function animate() {
 	requestAnimationFrame( animate );
 
 	let delta = clock.getDelta();
-	let sunRotationSpeed = 2 * Math.PI * (1/30) * delta;
-	let earthRotationSpeed = 2 * Math.PI * delta;
-	let earthRevolutionSpeed = 2 * Math.PI * (1/365) * delta;
-	let moonRotationSpeed = 2 * Math.PI * (1/27) * delta;
-	let moonRevolutionSpeed = 2 * Math.PI  * (1/27) * delta;
 
-	sun.mesh.rotateY(sunRotationSpeed);
-	earth.mesh.rotateY(earthRotationSpeed);
-	earth.mesh.rotateY(-1*earthRevolutionSpeed);
-	earth.orbitPivot.rotateY(earthRevolutionSpeed);
-	moon.mesh.rotateY(moonRotationSpeed);
-	moon.mesh.rotateY(-1*moonRevolutionSpeed);
-	moon.orbitPivot.rotateOnAxis(new THREE.Vector3(0,1,0) , moonRevolutionSpeed);
-	
+	sun.mesh.rotateY(sunRotationSpeed * delta * commands.TimeScale);
+	earth.mesh.rotateY(earthRotationSpeed * delta * commands.TimeScale);
+	earth.mesh.rotateY(-1*earthRevolutionSpeed * delta * commands.TimeScale);	// reverse the effect of the revolution
+	earth.orbitPivot.rotateY(earthRevolutionSpeed * delta * commands.TimeScale);
+	moon.mesh.rotateY(moonRotationSpeed * delta * commands.TimeScale);
+	moon.mesh.rotateY(-1*moonRevolutionSpeed * delta * commands.TimeScale);
+	moon.orbitPivot.rotateY(moonRevolutionSpeed * delta * commands.TimeScale);
 	stats.update()
 	renderer.render( scene, camera );
 };
