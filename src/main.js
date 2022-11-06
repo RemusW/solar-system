@@ -35,11 +35,11 @@ const loader = new DRACOLoader();
 loader.setDecoderPath( 'https://www.gstatic.com/draco/v1/decoders/' );
 
 
-let sun = new Body();
+var sun = new Body();
 sun.system = new THREE.Group();
-let earth = new Body();
+var earth = new Body();
 earth.system = new THREE.Group();
-let moon = new Body();
+var moon = new Body();
 moon.system = new THREE.Group();
 
 // Load a Draco geometry
@@ -73,6 +73,7 @@ loader.load(
 		sun.system.add(earth.orbitPivot);
 		earth.system.add(earth.mesh);
 		earth.system.position.x = 150;
+		earth.mesh.add(new THREE.AxesHelper(700));
 	},
 );
 
@@ -95,7 +96,8 @@ loader.load(
 		moon.mesh.add(new THREE.AxesHelper(1000));
 	},
 );
-scene.add(new THREE.AxesHelper(1000));
+// scene.add(new THREE.AxesHelper(1000));
+
 scene.add(sun.system);
 
 const spaceTexture = new THREE.TextureLoader().load('Galaxy Background.png');
@@ -113,7 +115,7 @@ var obj = {
 		let target = new THREE.Vector3();
 		earth.system.getWorldPosition(target);
 		camera.lookAt(target);
-		// controls.update();
+		controls.update();
 	},
 	LookAtMoon: function() {
 		let target = new THREE.Vector3();
@@ -138,13 +140,15 @@ function animate() {
 	let earthRotationSpeed = 2 * Math.PI * delta;
 	let earthRevolutionSpeed = 2 * Math.PI * (1/365) * delta;
 	let moonRotationSpeed = 2 * Math.PI * (1/27) * delta;
-	let moonRevolutionSpeed = 2 * Math.PI * (1/27) * delta;
+	let moonRevolutionSpeed = 2 * Math.PI  * (1/27) * delta;
 
 	sun.mesh.rotateY(sunRotationSpeed);
 	earth.mesh.rotateY(earthRotationSpeed);
+	earth.mesh.rotateY(-1*earthRevolutionSpeed);
 	earth.orbitPivot.rotateY(earthRevolutionSpeed);
 	moon.mesh.rotateY(moonRotationSpeed);
-	moon.orbitPivot.rotateY(moonRevolutionSpeed);
+	moon.mesh.rotateY(-1*moonRevolutionSpeed);
+	moon.orbitPivot.rotateOnAxis(new THREE.Vector3(0,1,0) , moonRevolutionSpeed);
 	
 	stats.update()
 	renderer.render( scene, camera );
