@@ -6,6 +6,17 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
 import * as dat from 'dat.gui';
 import Stats from 'three/examples/jsm/libs/stats.module'
 
+const sunRotationSpeed = 2 * Math.PI * (1/30);
+const earthRotationSpeed = 2 * Math.PI;
+const earthRevolutionSpeed = 2 * Math.PI * (1/365);
+const moonRotationSpeed = 2 * Math.PI * (1/27);
+const moonRevolutionSpeed = 2 * Math.PI  * (1/27);
+const earthDistance = 150;
+const moonDistance = 30;
+const sunRadius = 0.1;
+const earthRadius = .03;
+const moonRadius = 0.01;
+
 // Main organizational body for Celestial Bodies. Bodies revolve around a orbitPoint.
 // System is a group that contains all Bodies that would orbit around it
 class Body {
@@ -35,11 +46,6 @@ const loader = new DRACOLoader();
 // Specify path to a folder containing WASM/JS decoding libraries.
 loader.setDecoderPath( 'https://www.gstatic.com/draco/v1/decoders/' );
 
-const sunRotationSpeed = 2 * Math.PI * (1/30);
-const earthRotationSpeed = 2 * Math.PI;
-const earthRevolutionSpeed = 2 * Math.PI * (1/365);
-const moonRotationSpeed = 2 * Math.PI * (1/27);
-const moonRevolutionSpeed = 2 * Math.PI  * (1/27);
 
 var sun = new Body();
 var earth = new Body();
@@ -59,7 +65,7 @@ loader.load(
 		const texture = new THREE.TextureLoader().load('Sun Diffuse.png');
 		const material = new THREE.MeshBasicMaterial( { map: texture } );
 		sun.mesh = new THREE.Mesh( geometry, material );
-		sun.mesh.scale.set(.1, .1, .1);
+		sun.mesh.scale.set(sunRadius, sunRadius, sunRadius);
 		sun.system.add(sun.mesh);
 	},
 );
@@ -74,12 +80,13 @@ loader.load(
 		const normalMap = new THREE.TextureLoader().load('Earth Normal.png');
 		const material = new THREE.MeshStandardMaterial( { map: texture, normalMap: normalMap } );
 		earth.mesh = new THREE.Mesh( geometry, material );
-		earth.mesh.scale.set(.03, .03, .03);
+		earth.mesh.scale.set(earthRadius, earthRadius, earthRadius);
+		// Create orbit point centered at the system the earth belongs to
 		earth.orbitPivot = new THREE.Object3D();
 		earth.orbitPivot.add(earth.system);
-		earth.system.add(earth.mesh);
-		earth.system.position.x = 150;
 		sun.system.add(earth.orbitPivot);
+		earth.system.add(earth.mesh);
+		earth.system.position.x = earthDistance;
 	},
 );
 
@@ -92,13 +99,13 @@ loader.load(
 		const texture = new THREE.TextureLoader().load('Moon Diffuse.png');
 		const material = new THREE.MeshStandardMaterial( { map: texture } );
 		moon.mesh = new THREE.Mesh( geometry, material );
-		moon.mesh.scale.set(.01, .01, .01);
+		moon.mesh.scale.set(moonRadius, moonRadius, moonRadius);
+		// Create orbit point centered at the system the moon belongs to
 		moon.orbitPivot = new THREE.Object3D();
 		moon.orbitPivot.add(moon.system);
 		earth.system.add(moon.orbitPivot);
 		moon.system.add(moon.mesh);
-		moon.system.position.x = 30;
-		earth.system.add(moon.orbitPivot);
+		moon.system.position.x = moonDistance;
 	},
 );
 
