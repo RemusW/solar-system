@@ -10,6 +10,7 @@ import Stats from 'three/examples/jsm/libs/stats.module'
 class Body {
 	mesh;
 	system;
+	orbitPivot;
 }
 
 const TIME_STEP = 1/60;
@@ -41,8 +42,6 @@ earth.system = new THREE.Group();
 let moon = new Body();
 moon.system = new THREE.Group();
 
-
-let solarSystem = new THREE.Group();
 // Load a Draco geometry
 loader.load(
 	// resource URL
@@ -58,7 +57,6 @@ loader.load(
 	},
 );
 
-let earthSystem = new THREE.Group();
 // Load a Draco geometry
 loader.load(
 	// resource URL
@@ -70,12 +68,14 @@ loader.load(
 		const material = new THREE.MeshStandardMaterial( { map: texture, normalMap: normalMap } );
 		earth.mesh = new THREE.Mesh( geometry, material );
 		earth.mesh.scale.set(.03, .03, .03);
+		earth.orbitPivot = new THREE.Object3D();
+		earth.orbitPivot.add(earth.system);
+		sun.system.add(earth.orbitPivot);
 		earth.system.add(earth.mesh);
 		earth.system.position.x = 150;
 	},
 );
 
-let moonSystem = new THREE.Group();
 // Load a Draco geometry
 loader.load(
 	// resource URL
@@ -86,19 +86,20 @@ loader.load(
 		const material = new THREE.MeshBasicMaterial( { map: texture } );
 		moon.mesh = new THREE.Mesh( geometry, material );
 		moon.mesh.scale.set(.01, .01, .01);
+		moon.orbitPivot = new THREE.Object3D();
+		moon.orbitPivot.add(moon.system);
+		earth.system.add(moon.orbitPivot);
 		moon.system.add(moon.mesh);
 		moon.system.position.x = 30;
-		console.log(moon.system.matrixWorld);
+		earth.system.add(moon.orbitPivot);
 		moon.mesh.add(new THREE.AxesHelper(1000));
 	},
 );
-sun.system.add(earth.system);
-earth.system.add(moon.system);
 scene.add(new THREE.AxesHelper(1000));
 scene.add(sun.system);
 
-const spaceTexture = new THREE.TextureLoader().load('Sun Diffuse.png');
-// scene.background = spaceTexture;
+const spaceTexture = new THREE.TextureLoader().load('Galaxy Background.png');
+scene.environment = spaceTexture;
 
 const gui = new dat.GUI();
 var obj = { 
@@ -106,19 +107,19 @@ var obj = {
 		let target = new THREE.Vector3();
 		sun.system.getWorldPosition(target);
 		camera.lookAt(target);
-		controls.update();
+		// controls.update();
 	},
 	LookAtEarth: function() {
 		let target = new THREE.Vector3();
 		earth.system.getWorldPosition(target);
 		camera.lookAt(target);
-		controls.update();
+		// controls.update();
 	},
 	LookAtMoon: function() {
 		let target = new THREE.Vector3();
 		moon.system.getWorldPosition(target);
 		camera.lookAt(target);
-		controls.update();
+		// controls.update();
 	}
 };
 
@@ -133,13 +134,6 @@ function animate() {
 	requestAnimationFrame( animate );
 
 	let delta = clock.getDelta();
-	// sunMesh.rotation.y += 0.1 * 1/60;
-	// solarSystem.rotation.y += 0.01;
-	// earthSystem.rotation.y += 0.2 * 1/60;
-	// earthMesh.rotateY(.01);
-	// moonSystem.rotation.y += 0.2 * 1/60;
-	// moonSystem.rotateY(.002);
-	// let speed = (2 * Math.PI * 150) / ;
 	let sunRotationSpeed = 2 * Math.PI * (1/30) * delta;
 	let earthRotationSpeed = 2 * Math.PI * delta;
 	let earthRevolutionSpeed = 2 * Math.PI * (1/365) * delta;
@@ -148,9 +142,9 @@ function animate() {
 
 	sun.mesh.rotateY(sunRotationSpeed);
 	earth.mesh.rotateY(earthRotationSpeed);
-	earth.system.rotateY(earthRevolutionSpeed);
+	earth.orbitPivot.rotateY(earthRevolutionSpeed);
 	moon.mesh.rotateY(moonRotationSpeed);
-	moon.system.rotateY(moonRevolutionSpeed);
+	moon.orbitPivot.rotateY(moonRevolutionSpeed);
 	
 	stats.update()
 	renderer.render( scene, camera );
